@@ -1,0 +1,84 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow                  # new type of k8s spec
+metadata:
+  generateName: model-test-workflow-    # name of the workflow spec
+spec:
+  #ttlSecondsAfterFinished: 60
+  entrypoint: test-model-server          # invoke the whalesay template
+  arguments:
+    parameters:
+    - name: model-image
+      value: IMAGE
+    - name: model-image-tag
+      value: TAG
+    - name: model-repo
+      value: REPO
+  templates:
+  - name: test-model-server
+    steps:
+    - - name: start-server
+        template: model-server
+        arguments:
+          parameters:
+          - name: image
+            value: "{{workflow.parameters.model-image}}"
+          - name: tag
+            value: "{{workflow.parameters.model-image-tag}}"
+          - name: repo
+            value: "{{workflow.parameters.model-repo}}"
+
+    - - name: run-tests
+        template: model-tester
+        arguments:
+          parameters:
+          - name: ip
+            value: "{{steps.start-server.ip}}"
+          - name: image
+            value: "{{workflow.parameters.model-image}}"
+          - name: tag
+            value: "{{workflow.parameters.model-image-tag}}"
+          - name: repo
+            value: "{{workflow.parameters.model-repo}}"
+
+  - name: model-tester
+    inputs:
+      parameters:
+      - name: image
+      - name: ip
+      - name: tag
+      - name: repo
+    container:
+      name: tester
+      image: "{{inputs.parameters.repo}}/{{inputs.parameters.image}}-tester:{{inputs.parameters.tag}}"
+      args: ["{{inputs.parameters.ip}}"]
+      imagePullPolicy: Always
+      resources:                # limit the resources
+        limits:
+          memory: 256Mi
+          cpu: 250m
+        requests:
+          memory: 256Mi
+          cpu: 250m
+
+  - name: model-server              # name of the template
+    daemon: true
+    inputs:
+      parameters:
+      - name: image
+      - name: tag
+      - name: repo
+    nodeSelector:
+      acceleration: gpu
+    container:
+      name: model-server
+      image: "{{inputs.parameters.repo}}/{{inputs.parameters.image}}:{{inputs.parameters.tag}}" #"{{inputs.parameters.image}}"
+      command: [fwatchdog]
+      imagePullPolicy: Always
+      args: []
+      resources:                # limit the resources
+        limits:
+          memory: 4Gi
+          cpu: 4
+        requests:
+          memory: 1Gi
+          cpu: 1

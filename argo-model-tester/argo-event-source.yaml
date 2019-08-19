@@ -1,0 +1,20 @@
+# This configmap contains the event sources configurations for Webhook gateway
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: webhook-event
+  labels:
+    # do not remove
+    argo-events-event-source-version: v0.10
+data:
+  # gateway can run multiple HTTP servers. Simply define a unique port to start a new HTTP server
+
+  containers: |-
+    # port to run HTTP server on
+    port: "12000"
+    # endpoint to listen to
+    endpoint: "/containers"
+    # HTTP request method to allow. In this case, only POST requests are accepted
+    method: "POST"
