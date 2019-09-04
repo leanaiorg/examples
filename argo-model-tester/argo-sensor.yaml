@@ -1,0 +1,55 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: webhook-sensor
+  labels:
+    sensors.argoproj.io/sensor-controller-instanceid: argo-events
+    # sensor controller will use this label to match with it's own version
+    # do not remove
+    argo-events-sensor-version: v0.10
+spec:
+  template:
+    spec:
+      containers:
+        - name: "sensor"
+          image: "argoproj/sensor"
+          imagePullPolicy: Always
+      serviceAccountName: argo-events-sa
+  dependencies:
+    - name: "webhook-gateway:containers"
+      filters:
+        name: "check-if-push"
+        data:
+          - path: events.0.action
+            type: string
+            value:
+              - "push"
+  eventProtocol:
+    type: "HTTP"
+    http:
+      port: "9300"
+  triggers:
+    - template:
+        name: webhook-workflow-trigger
+        group: argoproj.io
+        version: v1alpha1
+        kind: Workflow
+        source:
+          configmap:
+            name: prediction-testing-workflow
+            # set namespace where configmap with workflow template resides
+            namespace: kubeflow
+            key: workflow
+      resourceParameters:
+        - src: # image
+            event: "webhook-gateway:containers"
+            path: events.0.target.repository
+          dest: spec.arguments.parameters.0.value
+        - src: # tag
+            event: "webhook-gateway:containers"
+            path: events.0.target.tag
+          dest: spec.arguments.parameters.1.value
+        - src: # repo
+            event: "webhook-gateway:containers"
+            path: events.0.request.host
+          dest: spec.arguments.parameters.2.value
