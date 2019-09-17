@@ -1,9 +1,9 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow                  # new type of k8s spec
 metadata:
-  generateName: model-test-workflow-    # name of the workflow spec
+  generateName: model-test-deploy-workflow-    # name of the workflow spec
 spec:
-  #ttlSecondsAfterFinished: 60
+  ttlSecondsAfterFinished: 1800  # remove wf after 30 minutes if completed/terminated
   entrypoint: test-model-server          # invoke the whalesay template
   arguments:
     parameters:
@@ -40,6 +40,26 @@ spec:
           - name: repo
             value: "{{workflow.parameters.model-repo}}"
 
+    - - name: remove-existing-server
+        template: remove-existing-server
+        arguments:
+          parameters:
+            - name: image
+              value: "{{workflow.parameters.model-image}}"
+            - name: tag
+              value: "{{workflow.parameters.model-image-tag}}"
+
+    - - name: deploy-server
+        template: deploy-server
+        arguments:
+          parameters:
+            - name: image
+              value: "{{workflow.parameters.model-image}}"
+            - name: tag
+              value: "{{workflow.parameters.model-image-tag}}"
+            - name: repo
+              value: "{{workflow.parameters.model-repo}}"
+
   - name: model-tester
     inputs:
       parameters:
@@ -67,18 +87,52 @@ spec:
       - name: image
       - name: tag
       - name: repo
-    nodeSelector:
-      acceleration: gpu
     container:
       name: model-server
       image: "{{inputs.parameters.repo}}/{{inputs.parameters.image}}:{{inputs.parameters.tag}}" #"{{inputs.parameters.image}}"
       command: [fwatchdog]
       imagePullPolicy: Always
       args: []
-      resources:                # limit the resources
-        limits:
-          memory: 4Gi
-          cpu: 4
-        requests:
-          memory: 1Gi
-          cpu: 1
+
+
+  - name: deploy-server
+    inputs:
+      parameters:
+      - name: image
+      - name: tag
+      - name: repo
+    resource:                   # indicates that this is a resource template
+      action: apply            # can be any kubectl action (e.g. create, delete, apply, patch)
+      failureCondition: status.failed > 3
+      manifest: |               #put your kubernetes spec here
+        apiVersion: openfaas.com/v1alpha2
+        kind: Function
+        metadata:
+          name: "{{inputs.parameters.image}}-{{inputs.parameters.tag}}"
+          # put this in you openfaas serving namespace
+          namespace: serve-fn
+        spec:
+          imagePullPolicy: Always
+          name: "{{inputs.parameters.image}}-{{inputs.parameters.tag}}"
+          image: "{{inputs.parameters.repo}}/{{inputs.parameters.image}}:{{inputs.parameters.tag}}"
+          labels:
+            com.openfaas.scale.min: "1"
+            com.openfaas.scale.max: "15"
+          environment:
+            output: "verbose"
+            debug: "false"
+
+  - name: remove-existing-server
+    inputs:
+      parameters:
+      - name: image
+      - name: tag
+    resource:                   # indicates that this is a resource template
+      action: delete            # can be any kubectl action (e.g. create, delete, apply, patch)
+      manifest: |               #put your kubernetes spec here
+        apiVersion: openfaas.com/v1alpha2
+        kind: Function
+        metadata:
+          name: "{{inputs.parameters.image}}-{{inputs.parameters.tag}}"
+          # put this in you openfaas serving namespace
+          namespace: serve-fn

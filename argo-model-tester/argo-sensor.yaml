@@ -38,7 +38,7 @@ spec:
           configmap:
             name: prediction-testing-workflow
             # set namespace where configmap with workflow template resides
-            namespace: kubeflow
+            namespace: default
             key: workflow
       resourceParameters:
         - src: # image
