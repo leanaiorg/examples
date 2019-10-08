@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: 2016-02-18T19:14:38Z
+  name: workflows-prod
+  namespace: default
+data:
+  transform-wf: |-
+    apiVersion: argoproj.io/v1alpha1
+    kind: Workflow
+    metadata:
+      generateName: transform-image-
+    spec:
+      entrypoint: transform-image-step
+      volumeClaimTemplates:
+      - metadata:
+          name: workdir
+        spec:
+          accessModes: [ "ReadWriteOnce" ]
+          resources:
+            requests:
+              storage: 1Gi
+      arguments:
+        artifacts:
+        - name: my-art
+          s3:
+            endpoint: leanai-minio.default.svc.cluster.local:9000
+            bucket: inbox
+            # key is overridden by parameter from sensor trigger.
+            key: hello-old-cows.txt
+            insecure: true
+            accessKeySecret:
+              name: leanai-minio
+              key: accesskey
+            secretKeySecret:
+              name: leanai-minio
+              key: secretkey
+      templates:
+      - name: transform-image-step
+        inputs:
+          artifacts:
+          - name: my-art
+            path: /my-artifact
+
+        container:
+          image: v4tech/imagemagick
+          command: ["convert", "/my-artifact", "-colorspace", "Gray", "/output/artifact.png"]
+          volumeMounts:
+          - name: workdir
+            mountPath: /output
+        outputs:
+          artifacts:
+          - name: image
+            path: /output/artifact.png
+            # It is possible to disable tar.gz archiving by setting the archive strategy to 'none'
+            # Disabling archiving has the following limitations on S3: symbolic links will not be
+            # uploaded, as S3 does not support the concept/file mode of symlinks.
+            archive:
+             none: {}
