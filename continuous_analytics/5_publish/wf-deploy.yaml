@@ -30,7 +30,7 @@ spec:
                 containers:
                   - image: registry.demo.scaleout.se/serve # The URL to the image of the app
                   #- image: gcr.io/knative-samples/helloworld-go # The URL to the image of the app
-                    command: ["/bin/bash"]
+                    #command: ["/bin/bash"]
                     env:
                       - name: TARGET # The environment variable printed out by the sample app
                         value: "Go Sample v2"
