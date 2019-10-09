@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: 2016-02-18T19:14:38Z
+  name: train-workflows-prod
+  namespace: default
+data:
+  train-wf: |-
+    apiVersion: argoproj.io/v1alpha1
+    kind: Workflow
+    metadata:
+      generateName: train-
+    spec:
+      entrypoint: train-step
+      imagePullSecrets:
+      - name: regcred
+      volumeClaimTemplates:
+      - metadata:
+          name: workdir
+        spec:
+          accessModes: [ "ReadWriteOnce" ]
+          resources:
+            requests:
+              storage: 1Gi
+      arguments:
+        artifacts:
+        - name: dataset
+          s3:
+            endpoint: leanai-minio.default.svc.cluster.local:9000
+            bucket: dataset
+            # key is overridden by parameter from sensor trigger.
+            #key: hello-old-cows.txt
+            key: mnist_train.csv
+            insecure: true
+            accessKeySecret:
+              name: leanai-minio
+              key: accesskey
+            secretKeySecret:
+              name: leanai-minio
+              key: secretkey
+      templates:
+      - name: train-step
+        inputs:
+          artifacts:
+          - name: dataset
+            path: /input/data/mnist_train.csv
+
+        container:
+          image: registry.demo.scaleout.se/train
+          command: ["python","train.py"]
+          volumeMounts:
+          - name: workdir
+            mountPath: /output
+        outputs:
+          artifacts:
+          - name: model
+            path: /output/model.pyb
+            # It is possible to disable tar.gz archiving by setting the archive strategy to 'none'
+            # Disabling archiving has the following limitations on S3: symbolic links will not be
+            # uploaded, as S3 does not support the concept/file mode of symlinks.
+            archive:
+             none: {}

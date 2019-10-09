@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: deploy-
+spec:
+  entrypoint: deploy-wf
+  templates:
+  - name: deploy-wf
+    resource:                   # indicates that this is a resource template
+      action: apply            # can be any kubectl action (e.g. create, delete, apply, patch)
+      # The successCondition and failureCondition are optional expressions.
+      # If failureCondition is true, the step is considered failed.
+      # If successCondition is true, the step is considered successful.
+      # They use kubernetes label selection syntax and can be applied against any field
+      # of the resource (not just labels). Multiple AND conditions can be represented by comma
+      # delimited expressions.
+      # For more details: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+      #successCondition: status.succeeded > 0
+      failureCondition: status.failed > 3
+      manifest: |               #put your kubernetes spec here
+          apiVersion: serving.knative.dev/v1alpha1 # Current version of Knative
+          kind: Service
+          metadata:
+            name: helloworld-go # The name of the app
+            namespace: knative-serving # The namespace the app will use
+          spec:
+            template:
+              spec:
+                serviceAccountName: default
+                containers:
+                  - image: registry.demo.scaleout.se/serve # The URL to the image of the app
+                  #- image: gcr.io/knative-samples/helloworld-go # The URL to the image of the app
+                    command: ["/bin/bash"]
+                    env:
+                      - name: TARGET # The environment variable printed out by the sample app
+                        value: "Go Sample v2"
