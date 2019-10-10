@@ -4,10 +4,15 @@ metadata:
   generateName: build-container-
 spec:
   entrypoint: build-container
+  #imagePullSecrets:
+  #  - name: regcred
   templates:
   - name: build-container
     container:
       image: gcr.io/kaniko-project/executor:latest
+      env:
+        - name: DOCKER_CONFIG
+          value: "/kaniko/.docker/"
       args: ["--dockerfile=Dockerfile",
           "--context=/workspace/examples/continuous_analytics/4_build",   # ADD PATH
           "--destination=registry.demo.scaleout.se/serve:latest"]   # ADD REPO
@@ -16,12 +21,16 @@ spec:
         mountPath: etc/workspace
       - name: git-source
         mountPath: /workspace
+      - name: dockerjson
+        mountPath: /kaniko/.docker/
+        #subPath: config.json
     initContainers:
     - name: git-sync
       image: k8s.gcr.io/git-sync:v3.1.1
       args:
-        - "-ssh"
-        - "-repo=git@github.com:leanaiorg/examples"  # ADD REPOSITORY
+        #- "-ssh"
+        #- "-repo=git@github.com:leanaiorg/examples"  # ADD REPOSITORY
+        - "-repo=https://github.com/leanaiorg/examples"
         - "-dest=examples"
         - "-branch=continuous_analytics_pipeline"
       env:
@@ -39,3 +48,13 @@ spec:
       emptyDir: {}
     - name: workspace
       emptyDir: {}
+    - name: dockerjson
+      secret:
+        secretName: regcred
+        items:
+        - key: .dockerconfigjson
+          path: config.json
+    #- name: git-secret
+    #  secret:
+    #    secretName: git-creds
+    #    defaultMode: 288
