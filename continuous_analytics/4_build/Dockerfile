@@ -6,6 +6,8 @@ FROM python:3.7-slim
 ENV APP_HOME /app
 WORKDIR $APP_HOME
 COPY . ./
+RUN mkdir /model            #create placeholder dir
+RUN touch /model/model.pyb  #create placeholdermodel
 
 # Install production dependencies.
 RUN pip install Flask gunicorn
@@ -14,4 +16,4 @@ RUN pip install Flask gunicorn
 # webserver, with one worker process and 8 threads.
 # For environments with multiple CPU cores, increase the number of workers
 # to be equal to the cores available.
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 app:app
+CMD cp /model/model.pyb . && exec gunicorn --bind :$PORT --workers 1 --threads 8 app:app
