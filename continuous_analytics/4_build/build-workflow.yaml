@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: 2016-02-18T19:14:38Z
+  name: build-workflows-prod
+  namespace: default
+data:
+  build-wf: |-
+    apiVersion: argoproj.io/v1alpha1
+    kind: Workflow
+    metadata:
+      generateName: build-container-
+    spec:
+      entrypoint: build-container
+      #imagePullSecrets:
+      #  - name: regcred
+      arguments:
+        artifacts:
+        - name: model
+          s3:
+            endpoint: leanai-minio.default.svc.cluster.local:9000
+            bucket: artifacts
+            # key is overridden by parameter from sensor trigger.
+            #key: hello-old-cows.txt
+            key: model.pyb
+            insecure: true
+            accessKeySecret:
+              name: leanai-minio
+              key: accesskey
+            secretKeySecret:
+              name: leanai-minio
+              key: secretkey
+      templates:
+      - name: build-container
+        inputs:
+          artifacts:
+          - name: model
+            path: /model/model.pyb
+
+        container:
+          image: gcr.io/kaniko-project/executor:latest
+          env:
+            - name: DOCKER_CONFIG
+              value: "/kaniko/.docker/"
+          args: ["--dockerfile=Dockerfile",
+              "--context=/workspace/examples/continuous_analytics/4_build",   # ADD PATH
+              "--destination=registry.demo.scaleout.se/serve:latest"]   # ADD REPO
+          volumeMounts:
+          - name: workspace
+            mountPath: etc/workspace
+          - name: git-source
+            mountPath: /workspace
+          - name: dockerjson
+            mountPath: /kaniko/.docker/
+            #subPath: config.json
+        initContainers:
+        - name: git-sync
+          image: k8s.gcr.io/git-sync:v3.1.1
+          args:
+            #- "-ssh"
+            #- "-repo=git@github.com:leanaiorg/examples"  # ADD REPOSITORY
+            - "-repo=https://github.com/leanaiorg/examples"
+            - "-dest=examples"
+            - "-branch=continuous_analytics_pipeline"
+          env:
+          - name: GIT_SYNC_ONE_TIME
+            value: "true"
+          volumeMounts:
+          #- name: git-secret
+          #  mountPath: /etc/git-secret
+          - name: git-source
+            mountPath: /tmp/git
+          securityContext:
+            runAsUser: 65533 # git-sync user
+      volumes:
+        - name: git-source
+          emptyDir: {}
+        - name: workspace
+          emptyDir: {}
+        - name: dockerjson
+          secret:
+            secretName: regcred
+            items:
+            - key: .dockerconfigjson
+              path: config.json
+        #- name: git-secret
+        #  secret:
+        #    secretName: git-creds
+        #    defaultMode: 288
