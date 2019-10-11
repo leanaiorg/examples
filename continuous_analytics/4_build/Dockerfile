@@ -6,8 +6,8 @@ FROM python:3.7-slim
 ENV APP_HOME /app
 WORKDIR $APP_HOME
 COPY . ./
-RUN mkdir /model            #create placeholder dir
-RUN touch /model/model.pyb  #create placeholdermodel
+#RUN mkdir /model            #create placeholder dir
+#RUN touch /model/model.pyb  #create placeholdermodel
 
 # Install production dependencies.
 RUN pip install Flask gunicorn
