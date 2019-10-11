@@ -21,7 +21,7 @@ spec:
           apiVersion: serving.knative.dev/v1alpha1 # Current version of Knative
           kind: Service
           metadata:
-            name: helloworld-go # The name of the app
+            name: serve-model # The name of the app
             namespace: knative-serving # The namespace the app will use
           spec:
             template:

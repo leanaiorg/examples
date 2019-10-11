@@ -1,7 +1,10 @@
 FROM python:3
 
-COPY . /usr/src/
 WORKDIR /usr/src/
+
+COPY requirements.txt .
+COPY train.py .
+COPY read_data.py .
 
 RUN mkdir /input
 RUN mkdir /output

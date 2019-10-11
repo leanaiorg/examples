@@ -51,6 +51,10 @@ data:
           volumeMounts:
           - name: workdir
             mountPath: /output
+          resources:
+            requests:
+              cpu: 1
+              memory: 4Gi
         outputs:
           artifacts:
           - name: model

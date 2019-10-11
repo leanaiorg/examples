@@ -21,8 +21,7 @@ data:
             endpoint: leanai-minio.default.svc.cluster.local:9000
             bucket: artifacts
             # key is overridden by parameter from sensor trigger.
-            #key: hello-old-cows.txt
-            key: model.pyb
+            key: key/to/bucket/file.pyb
             insecure: true
             accessKeySecret:
               name: leanai-minio
@@ -42,7 +41,8 @@ data:
           env:
             - name: DOCKER_CONFIG
               value: "/kaniko/.docker/"
-          args: ["--dockerfile=Dockerfile",
+          args:
+              ["--dockerfile=Dockerfile",
               "--context=/workspace/examples/continuous_analytics/4_build",   # ADD PATH
               "--destination=registry.demo.scaleout.se/serve:latest"]   # ADD REPO
           volumeMounts:
