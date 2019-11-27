@@ -15,21 +15,21 @@ For this example, a docker registry is hosted and configured to send event notif
 Note that the `argo-gateway.yaml` file contains a spec for a kubernetes service, which is the endpoint that the docker registry should send notifications to.
 
 ### Step 1 - set up webhook gateway and sensor
-With the argo events gateway and sensor controller already installed, step 1 is to modify and apply the event source, gatway and sensor components in the namespace where the workflows should be run. The main modification is in the sensor, in which the namespace for the configmap with the workflow needs to be specified. It is set to `''` by default, and the configmap is created in the next step so choosing the namespace is up to you. After modifying the components as desired, apply the configuration like so:
+With the argo events gateway and sensor controller already installed, step 1 is to modify and apply the event source, gatway and sensor components in the namespace where the workflows should be run. The main modification is in the sensor, in which the namespace for the configmap with the workflow needs to be specified. It is set to `<namespace of configmap>` by default, and the configmap is created in the next step so choosing the namespace is up to you. After modifying the components as desired, apply the configuration like so:
 
 ```
-kubectl apply -f argo-event-source.yaml -n default # switch default to desired namespace
-kubectl apply -f argo-gateway.yaml -n default # switch default to desired namespace
-kubectl apply -f argo-sensor.yaml -n default # switch default to desired namespace
+kubectl apply -f argo-event-source.yaml -n <desired namespace> # switch default to desired namespace
+kubectl apply -f argo-gateway.yaml -n <desired namespace> # switch default to desired namespace
+kubectl apply -f argo-sensor.yaml -n <desired namespace> # switch default to desired namespace
 ```
 
 Check the logs of both the `argo-events-gateway-controller` and `argo-events-sensor-controller` for errors, and then the logs of the just-applied pods as well.
 
 ### Step 2 - create configmap of workflow template
-The next step is to create a configmap containing the workflow template. This is just one alternative for providing templates in file, refer to [argo triggers](https://argoproj.github.io/argo-events/trigger/) to learn of others, but a configmap is a simple way. Apply it in the namespace you specified in the sensor configuration in step 1:
+The next step is to create a configmap containing the workflow template. This is just one alternative for providing templates in file, refer to [argo triggers](https://argoproj.github.io/argo-events/trigger/) to learn of others, but a configmap is a simple way. Modify the configmap and provide the OpenFaaS serving namespace, then apply it in the namespace you specified in the sensor configuration in step 1:
 
 ```
-kubectl create configmap prediction-testing-workflow --from-file=workflow=model-testing-workflow.yaml -n default # switch default to desired namespace
+kubectl apply -f model-testing-worfklow.yaml -n <desired namespace> # switch default to desired namespace
 ```
 
 Here, the key is set to `workflow`, which is how the sensor identifies the template when triggering a workflow from the configmap `prediction-testing-workflow`.
