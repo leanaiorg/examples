@@ -46,4 +46,4 @@ spec:
     sensors:
       - name: "webhook-sensor"
       ### for debugging, create a webhook sensor called debugging-webhook-sensor and uncomment the row below
-      - name: "debugging-webhook-sensor"
+      #- name: "debugging-webhook-sensor"
